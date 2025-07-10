@@ -13,7 +13,7 @@ from opencompass.partitioners import NaivePartitioner, NumWorkerPartitioner
 from opencompass.tasks import OpenICLInferTask, OpenICLEvalTask
 from opencompass.runners import LocalRunner
 from opencompass.models import (
-    TurboMindModelwithChatTemplate,
+    TurboMindModelwithChatTemplate, VLLMwithChatTemplate
 )
 
 #######################################################################
@@ -145,6 +145,21 @@ models += [
         batch_size=128,
         run_cfg=dict(num_gpus=4),
     ),
+    # To evaluate with vLLM, uncomment the following configuration.
+    # dict(
+    #     type=VLLMwithChatTemplate,
+    #     abbr='deepseek-r1-0528-chat-vllm',
+    #     path='deepseek-ai/DeepSeek-R1-0528-Chat',
+    #     model_kwargs=dict(tensor_parallel_size=4),
+    #     generation_kwargs=dict(
+    #         temperature=0.6,
+    #         top_p=0.95,
+    #     ),
+    #     max_out_len=65536,
+    #     max_seq_len=65536,
+    #     batch_size=128,
+    #     run_cfg=dict(num_gpus=4),
+    # ),
 ]
 
 #######################################################################

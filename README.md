@@ -524,3 +524,61 @@ Some datasets and prompt implementations are modified from [chain-of-thought-hub
 
 4.  **查看结果**:
     评估完成后，结果将保存在 `outputs/deepseek_r1_reasoning/` 目录下。您可以在对应的 `summary` 文件中查看 `AIME2024-Aveage16` 的 `naive_average` 分数。
+
+## 使用 vLLM 进行加速评估
+
+为了提高评估效率，您可以使用 vLLM 作为推理后端。
+
+### 1. 安装 vLLM
+
+首先，请确保您已经安装了 vLLM。如果尚未安装，可以通过以下命令安装 `opencompass` 的 vLLM 依赖：
+
+```bash
+pip install "opencompass[vllm]"
+```
+
+### 2. 配置 vLLM 模型
+
+我们已经在 `examples/eval_deepseek_r1.py` 文件中添加了使用 vLLM 的模型配置。您只需取消注释对应的部分即可启用：
+
+```python
+# examples/eval_deepseek_r1.py
+
+# ...
+from opencompass.models import (
+    TurboMindModelwithChatTemplate, VLLMwithChatTemplate
+)
+# ...
+
+models = [
+    # ... other model configs
+    
+    # To evaluate with vLLM, uncomment the following configuration.
+    dict(
+        type=VLLMwithChatTemplate,
+        abbr='deepseek-r1-0528-chat-vllm',
+        path='deepseek-ai/DeepSeek-R1-0528-Chat',
+        model_kwargs=dict(tensor_parallel_size=4),
+        generation_kwargs=dict(
+            temperature=0.6,
+            top_p=0.95,
+        ),
+        max_out_len=65536,
+        max_seq_len=65536,
+        batch_size=128,
+        run_cfg=dict(num_gpus=4),
+    ),
+]
+```
+
+请确保您已将其他模型配置注释掉，以避免重复评估。
+
+### 3. 执行评估
+
+配置完成后，使用与之前相同的命令来启动 vLLM 评估：
+
+```bash
+python run.py examples/eval_deepseek_r1.py
+```
+
+评估结果将同样保存在 `outputs/deepseek_r1_reasoning/` 目录中。
