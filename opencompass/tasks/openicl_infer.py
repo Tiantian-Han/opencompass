@@ -34,35 +34,23 @@ class OpenICLInferTask(BaseTask):
         self.num_gpus = run_cfg.get('num_gpus', 0)
         self.num_procs = run_cfg.get('num_procs', 1)
         self.logger = get_logger()
+        self.generation_kwargs = self.model.generation_kwargs
 
-    def get_command(self, cfg_path, template):
+    def get_command(self, cfg_path, template, **kwargs) -> str:
         """Get the command template for the task.
 
         Args:
             cfg_path (str): The path to the config file of the task.
-            template (str): The template which have '{task_cmd}' to format
-                the command.
+            template (str): The template for the command.
         """
-        sys.path.append(os.getcwd())
         script_path = __file__
-        backend_keys = ['VLLM', 'Lmdeploy']
-        use_backend = any(
-            key in str(self.model_cfgs[0].get('type', ''))
-            or key in str(self.model_cfgs[0].get('llm', {}).get('type', ''))
-            for key in backend_keys)
-        if self.num_gpus > 1 and not use_backend:
-            port = random.randint(12000, 32000)
-            command = (f'torchrun --master_port={port} '
-                       f'--nproc_per_node {self.num_procs} '
-                       f'{script_path} {cfg_path}')
-        else:
-            python = sys.executable
-            command = f'{python} {script_path} {cfg_path}'
-
-        return template.format(task_cmd=command)
+        if self.num_gpus > 0:
+            # torchrun will be used to launch the script
+            return template.format(task_cmd=f'{script_path} {cfg_path}')
+        return template.format(task_cmd=f'{sys.executable} {script_path} {cfg_path}')
 
     def run(self, cur_model=None, cur_model_abbr=None):
-        self.logger.info(f'Task {task_abbr_from_cfg(self.cfg)}')
+        self.logger.info(f'Task {self.name} begin')
         for model_cfg, dataset_cfgs in zip(self.model_cfgs, self.dataset_cfgs):
             self.max_out_len = model_cfg.get('max_out_len', None)
             self.batch_size = model_cfg.get('batch_size', None)

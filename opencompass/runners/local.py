@@ -222,10 +222,6 @@ class LocalRunner(BaseRunner):
                               cfg_path=param_file,
                               template=tmpl)
             cmd = get_cmd()
-            
-            # Ensure torchrun uses the same python interpreter
-            if 'python ' in cmd:
-                cmd = cmd.replace('python ', f'{sys.executable} ', 1)
 
             logger = get_logger()
             logger.debug(f'Running command: {cmd}')
