@@ -24,7 +24,7 @@ with read_base():
 
     # Datasets
     # from opencompass.configs.datasets.math.math_prm800k_500_llmverify_gen_6ff468 import math_datasets # 1 Run
-    from opencompass.configs.datasets.aime2024.aime2024_llmverify_repeat8_gen_e8fcee import aime2024_datasets # 8 Run
+    from opencompass.configs.datasets.aime2024.aime2024_llmverify_repeat16_gen_bf7475 import aime2024_datasets # 16 Run
     # from opencompass.configs.datasets.OlympiadBench.OlympiadBench_0shot_llmverify_gen_be8b13 import olympiadbench_datasets
     # from opencompass.configs.datasets.omni_math.omni_math_llmverify_gen_ccf9c0 import omnimath_datasets # 1 Run
     # from opencompass.configs.datasets.livemathbench.livemathbench_hard_custom_llmverify_gen_85d0ef import livemathbench_datasets
@@ -83,14 +83,14 @@ models += [
         type=TurboMindModelwithChatTemplate,
         abbr='deepseek-r1-distill-qwen-7b-turbomind',
         path='deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
-        engine_config=dict(session_len=32768, max_batch_size=128, tp=1),
+        engine_config=dict(session_len=65536, max_batch_size=128, tp=1),
         gen_config=dict(
                         do_sample=True,
                         temperature=0.6,
                         top_p=0.95,
-                        max_new_tokens=32768),
-        max_seq_len=32768,
-        max_out_len=32768,
+                        max_new_tokens=65536),
+        max_seq_len=65536,
+        max_out_len=65536,
         batch_size=64,
         run_cfg=dict(num_gpus=1),
         pred_postprocessor=dict(type=extract_non_reasoning_content)
@@ -127,6 +127,24 @@ models += [
     #     run_cfg=dict(num_gpus=4),
     #     pred_postprocessor=dict(type=extract_non_reasoning_content)
     # ),
+    # Add deepseek-r1-0528 model.
+    # This model supports system prompts and does not require forced thinking via <think> tags.
+    # Therefore, pred_postprocessor is removed.
+    dict(
+        type=TurboMindModelwithChatTemplate,
+        abbr='deepseek-r1-0528-chat-turbomind',
+        path='deepseek-ai/DeepSeek-R1-0528-Chat',
+        engine_config=dict(session_len=65536, max_batch_size=128, tp=4),
+        gen_config=dict(
+                        do_sample=True,
+                        temperature=0.6,
+                        top_p=0.95,
+                        max_new_tokens=65536),
+        max_seq_len=65536,
+        max_out_len=65536,
+        batch_size=128,
+        run_cfg=dict(num_gpus=4),
+    ),
 ]
 
 #######################################################################
@@ -174,8 +192,8 @@ summary_groups = sum(
 
 summary_groups.extend([
     {
-        'name': 'AIME2024-Aveage8',
-        'subsets':[[f'aime2024-run{idx}', 'accuracy'] for idx in range(8)]
+        'name': 'AIME2024-Aveage16',
+        'subsets':[[f'aime2024-run{idx}', 'accuracy'] for idx in range(16)]
     },
     {
         'name': 'LiveMathBench-v202412-Hard-Aveage8',
@@ -194,7 +212,7 @@ summarizer = dict(
         # ['LiveMathBench-v202412-greedy', 'G-Pass@1_0.0'],
         # ['aime2024', 'accuracy'],
         ['math_prm800k_500-llmjudge', 'accuracy'],
-        ['AIME2024-Aveage8', 'naive_average'],
+        ['AIME2024-Aveage16', 'naive_average'],
         ['LiveMathBench-v202412-Hard-Aveage8', 'naive_average'],
         ['OlympiadBenchMath', 'accuracy'],
         ['OmniMath', 'accuracy'],
