@@ -472,42 +472,47 @@ Some datasets and prompt implementations are modified from [chain-of-thought-hub
 
 要评估位于 `/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B` 的本地模型在 `AIME-2024` 任务上的精度，请按照以下步骤操作：
 
-1.  **确认配置文件**:
-    我们已经将 `examples/eval_deepseek_r1.py` 文件中的模型配置更新为指向您的本地模型。请确保该文件中的 `path` 字段与您的模型路径 `/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B` 完全一致。
+### 1. 确认配置文件
 
-    ```python
-    # opencompass/models/deepseek/hf_deepseek_r1_0528_qwen3_8b.py
+我们已经将 `examples/eval_deepseek_r1.py` 文件中的模型配置更新为指向您的本地模型，并配置为使用4卡进行张量并行（Tensor Parallelism）以加速评估。请确保配置如下：
 
-    from opencompass.models import TurboMindModelwithChatTemplate
+```python
+# examples/eval_deepseek_r1.py
 
-    models = [
-        dict(
-            type=TurboMindModelwithChatTemplate,
-            abbr='deepseek-r1-0528-qwen3-8b-turbomind',
-            path='deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',
-            engine_config=dict(session_len=65536, max_batch_size=128, tp=1),
-            gen_config=dict(
-                            do_sample=True,
-                            temperature=0.6,
-                            top_p=0.95,
-                            max_new_tokens=65536),
-            max_seq_len=65536,
-            max_out_len=65536,
-            batch_size=128,
-            run_cfg=dict(num_gpus=1),
-        ),
-    ]
-    ```
+from opencompass.models import TurboMindModelwithChatTemplate
 
-2.  **执行评估**:
-    运行以下命令来启动评估。
+models = [
+    dict(
+        type=TurboMindModelwithChatTemplate,
+        abbr='deepseek-r1-0528-qwen3-8b-turbomind',
+        path='/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B',
+        engine_config=dict(session_len=65536, max_batch_size=128, tp=4),
+        gen_config=dict(
+                        do_sample=True,
+                        temperature=0.6,
+                        top_p=0.95,
+                        max_new_tokens=65536),
+        max_seq_len=65536,
+        max_out_len=65536,
+        batch_size=128,
+        run_cfg=dict(num_gpus=4),
+    ),
+]
+```
+这里 `tp=4` 和 `num_gpus=4` 分别指定了张量并行的规模和所需的GPU数量。
 
-    ```bash
-    python run.py examples/eval_deepseek_r1.py
-    ```
+### 2. 执行评估
 
-3.  **查看结果**:
-    评估完成后，结果将保存在 `outputs/deepseek_r1_reasoning/` 目录下。您可以在对应的 `summary` 文件中查看 `AIME2024-Aveage16` 的 `naive_average` 分数。
+使用以下命令来启动4卡评估。请确保您有4张可用的GPU，并根据需要设置 `CUDA_VISIBLE_DEVICES`。
+
+```bash
+# 指定使用 0,1,2,3 四张卡
+CUDA_VISIBLE_DEVICES=0,1,2,3 python run.py examples/eval_deepseek_r1.py
+```
+
+### 3. 查看结果
+
+评估完成后，结果将保存在 `outputs/deepseek_r1_reasoning/` 目录下。您可以在对应的 `summary` 文件中查看 `AIME2024-Aveage16` 的 `naive_average` 分数。
 
 ## 使用 vLLM 进行加速评估
 

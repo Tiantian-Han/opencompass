@@ -83,7 +83,7 @@ models += [
         type=TurboMindModelwithChatTemplate,
         abbr='deepseek-r1-0528-qwen3-8b-turbomind',
         path='/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B',
-        engine_config=dict(session_len=65536, max_batch_size=128, tp=1),
+        engine_config=dict(session_len=65536, max_batch_size=128, tp=4),
         gen_config=dict(
                         do_sample=True,
                         temperature=0.6,
@@ -91,8 +91,8 @@ models += [
                         max_new_tokens=65536),
         max_seq_len=65536,
         max_out_len=65536,
-        batch_size=64,
-        run_cfg=dict(num_gpus=1),
+        batch_size=128,
+        run_cfg=dict(num_gpus=4),
     ),
     # You can uncomment the following models if you want to evaluate them instead.
     # dict(
