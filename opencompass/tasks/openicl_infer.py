@@ -21,7 +21,7 @@ from opencompass.utils import (build_dataset_from_cfg, build_model_from_cfg,
 class OpenICLInferTask(BaseTask):
     """OpenICL Inference Task.
 
-    This task is used to run the inference process.
+    This task is used to run inference on a model with a single dataset.
     """
 
     name_prefix = 'OpenICLInfer'
@@ -30,11 +30,9 @@ class OpenICLInferTask(BaseTask):
 
     def __init__(self, cfg: ConfigDict):
         super().__init__(cfg)
-        run_cfg = self.model_cfgs[0].get('run_cfg', {})
-        self.num_gpus = run_cfg.get('num_gpus', 0)
-        self.num_procs = run_cfg.get('num_procs', 1)
-        self.logger = get_logger()
-        self.generation_kwargs = self.model.generation_kwargs
+        self.num_gpus = self.cfg.get('num_gpus', 0)
+        self.model_cfg = self.cfg['model']
+        self.dataset_cfg = self.cfg['dataset']
 
     def get_command(self, cfg_path, template, **kwargs) -> str:
         """Get the command template for the task.
@@ -51,30 +49,22 @@ class OpenICLInferTask(BaseTask):
 
     def run(self, cur_model=None, cur_model_abbr=None):
         self.logger.info(f'Task {self.name} begin')
-        for model_cfg, dataset_cfgs in zip(self.model_cfgs, self.dataset_cfgs):
-            self.max_out_len = model_cfg.get('max_out_len', None)
-            self.batch_size = model_cfg.get('batch_size', None)
-            self.min_out_len = model_cfg.get('min_out_len', None)
-            if cur_model and cur_model_abbr == model_abbr_from_cfg(model_cfg):
-                self.model = cur_model
-            else:
-                self.model = build_model_from_cfg(model_cfg)
+        if cur_model is not None and self.model_cfg['abbr'] == cur_model_abbr:
+            self.model = cur_model
+        else:
+            self.model = build_model_from_cfg(self.model_cfg)
 
-            for dataset_cfg in dataset_cfgs:
-                self.model_cfg = model_cfg
-                self.dataset_cfg = dataset_cfg
-                self.infer_cfg = self.dataset_cfg['infer_cfg']
-                self.dataset = build_dataset_from_cfg(self.dataset_cfg)
-                self.sub_cfg = {
-                    'models': [self.model_cfg],
-                    'datasets': [[self.dataset_cfg]],
-                }
-                out_path = get_infer_output_path(
-                    self.model_cfg, self.dataset_cfg,
-                    osp.join(self.work_dir, 'predictions'))
-                if osp.exists(out_path):
-                    continue
-                self._inference()
+        self.generation_kwargs = self.model.generation_kwargs
+        
+        self.dataset = build_dataset_from_cfg(self.dataset_cfg)
+        self.inferencer = OpenICLInferencer(
+            model=self.model,
+            dataset=self.dataset,
+            output_json_filepath=self.output_path,
+            generation_kwargs=self.generation_kwargs,
+            **self.cfg.infer.inferencer.to_dict(),
+        )
+        self.inferencer.inference()
 
     def _inference(self):
         self.logger.info(
