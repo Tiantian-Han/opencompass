@@ -468,12 +468,12 @@ Some datasets and prompt implementations are modified from [chain-of-thought-hub
     - 为了进行 `pass@1` 评估，我们将 `AIME-2024` 数据集的采样次数从 8 次增加到了 16 次，即 `aime2024_llmverify_repeat16_gen_bf7475`。
     - 同时，`summarizer` 配置也相应更新，以正确计算 16 次运行结果的平均值。
 
-## `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` 精度评估流程
+## 本地模型精度评估流程 (以 DeepSeek-R1-0528-Qwen3-8B 为例)
 
-要评估 `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` 模型在 `AIME-2024` 任务上的精度，请按照以下步骤操作：
+要评估位于 `/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B` 的本地模型在 `AIME-2024` 任务上的精度，请按照以下步骤操作：
 
-1.  **准备配置文件**:
-    首先，需要在 `opencompass/models/deepseek` 目录下为 `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` 创建一个新的模型配置文件，例如 `hf_deepseek_r1_0528_qwen3_8b.py`。文件内容可以参考 `deepseek-r1-0528-chat-turbomind` 的配置，并确保 `path` 指向正确的模型路径。
+1.  **确认配置文件**:
+    我们已经将 `examples/eval_deepseek_r1.py` 文件中的模型配置更新为指向您的本地模型。请确保该文件中的 `path` 字段与您的模型路径 `/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B` 完全一致。
 
     ```python
     # opencompass/models/deepseek/hf_deepseek_r1_0528_qwen3_8b.py
@@ -499,30 +499,14 @@ Some datasets and prompt implementations are modified from [chain-of-thought-hub
     ]
     ```
 
-2.  **修改评估脚本**:
-    打开 `examples/eval_deepseek_r1.py`，导入并添加你刚刚创建的模型配置。
-
-    ```python
-    # ... at the top of the file
-    from opencompass.configs.models.deepseek.hf_deepseek_r1_0528_qwen3_8b import models as deepseek_r1_qwen3_8b_model
-
-    # ... inside the models list
-    models = sum([v for k, v in locals().items() if k.endswith('_model')], [])
-    models += deepseek_r1_qwen3_8b_model
-    models += [
-        # ... other models
-    ]
-    ```
-    请确保 `AIME-2024` 是唯一启用的数据集。
-
-3.  **执行评估**:
-    运行以下命令来启动评估。请将 `...` 替换为 `opencompass` 的可执行文件路径或直接使用 `python run.py` (如果适用)。
+2.  **执行评估**:
+    运行以下命令来启动评估。
 
     ```bash
     python run.py examples/eval_deepseek_r1.py
     ```
 
-4.  **查看结果**:
+3.  **查看结果**:
     评估完成后，结果将保存在 `outputs/deepseek_r1_reasoning/` 目录下。您可以在对应的 `summary` 文件中查看 `AIME2024-Aveage16` 的 `naive_average` 分数。
 
 ## 使用 vLLM 进行加速评估
@@ -557,7 +541,7 @@ models = [
     dict(
         type=VLLMwithChatTemplate,
         abbr='deepseek-r1-0528-chat-vllm',
-        path='deepseek-ai/DeepSeek-R1-0528-Chat',
+        path='/mnt/yrfs/llm_weights/DeepSeek-R1-0528-Qwen3-8B',
         model_kwargs=dict(tensor_parallel_size=4),
         generation_kwargs=dict(
             temperature=0.6,
