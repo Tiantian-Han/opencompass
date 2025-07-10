@@ -436,3 +436,91 @@ Some datasets and prompt implementations are modified from [chain-of-thought-hub
 [github-stars-shield]: https://img.shields.io/github/stars/open-compass/opencompass?color=ffcb47&labelColor=black&style=flat-square
 [github-trending-shield]: https://trendshift.io/api/badge/repositories/6630
 [github-trending-url]: https://trendshift.io/repositories/6630
+
+# DeepSeek-R1 评估指南
+
+本文档提供了使用 `opencompass` 评估 `DeepSeek-R1` 系列模型的指南。
+
+## 支持的评估任务
+
+当前评估脚本 `examples/eval_deepseek_r1.py` 支持以下数学推理相关的评测任务：
+
+- **AIME-2024**: 美国数学邀请赛题目。
+- **MATH**: Hendrycks' MATH 数据集。
+- **OlympiadBench**: 奥林匹克水平的数学题。
+- **OmniMath**: 包含多方面数学问题的综合基准。
+- **LiveMathBench**: 一个持续更新的数学问题基准。
+
+默认配置中主要启用了 **AIME-2024** (`aime2024_llmverify_repeat16_gen_bf7475`)，您可以按需在脚本中注释或取消注释其他数据集。
+
+## 代码修改说明
+
+为了适配 `DeepSeekR1-0528` 模型的最新使用说明，并满足特定的评估要求，我们对代码进行了如下修改：
+
+1.  **新增 `DeepSeekR1-0528` 模型配置**：
+    - 在 `examples/eval_deepseek_r1.py` 中为 `deepseek-ai/DeepSeek-R1-0528-Chat` 添加了新的模型配置。
+    - 根据官方指南，该版本模型已支持系统提示（System Prompt），不再需要强制使用 `<think>` 标签来引导模型进行思考。因此，移除了 `pred_postprocessor` 配置。
+
+2.  **更新最大生成长度**：
+    - 将所有模型的最大生成长度（`max_out_len`）、最大序列长度（`max_seq_len`）和会话长度（`session_len`）统一设置为 `65536` tokens，以支持更长的上下文。
+
+3.  **pass@1 评估配置**：
+    - 为了进行 `pass@1` 评估，我们将 `AIME-2024` 数据集的采样次数从 8 次增加到了 16 次，即 `aime2024_llmverify_repeat16_gen_bf7475`。
+    - 同时，`summarizer` 配置也相应更新，以正确计算 16 次运行结果的平均值。
+
+## `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` 精度评估流程
+
+要评估 `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` 模型在 `AIME-2024` 任务上的精度，请按照以下步骤操作：
+
+1.  **准备配置文件**:
+    首先，需要在 `opencompass/models/deepseek` 目录下为 `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` 创建一个新的模型配置文件，例如 `hf_deepseek_r1_0528_qwen3_8b.py`。文件内容可以参考 `deepseek-r1-0528-chat-turbomind` 的配置，并确保 `path` 指向正确的模型路径。
+
+    ```python
+    # opencompass/models/deepseek/hf_deepseek_r1_0528_qwen3_8b.py
+
+    from opencompass.models import TurboMindModelwithChatTemplate
+
+    models = [
+        dict(
+            type=TurboMindModelwithChatTemplate,
+            abbr='deepseek-r1-0528-qwen3-8b-turbomind',
+            path='deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',
+            engine_config=dict(session_len=65536, max_batch_size=128, tp=1),
+            gen_config=dict(
+                            do_sample=True,
+                            temperature=0.6,
+                            top_p=0.95,
+                            max_new_tokens=65536),
+            max_seq_len=65536,
+            max_out_len=65536,
+            batch_size=128,
+            run_cfg=dict(num_gpus=1),
+        ),
+    ]
+    ```
+
+2.  **修改评估脚本**:
+    打开 `examples/eval_deepseek_r1.py`，导入并添加你刚刚创建的模型配置。
+
+    ```python
+    # ... at the top of the file
+    from opencompass.configs.models.deepseek.hf_deepseek_r1_0528_qwen3_8b import models as deepseek_r1_qwen3_8b_model
+
+    # ... inside the models list
+    models = sum([v for k, v in locals().items() if k.endswith('_model')], [])
+    models += deepseek_r1_qwen3_8b_model
+    models += [
+        # ... other models
+    ]
+    ```
+    请确保 `AIME-2024` 是唯一启用的数据集。
+
+3.  **执行评估**:
+    运行以下命令来启动评估。请将 `...` 替换为 `opencompass` 的可执行文件路径或直接使用 `python run.py` (如果适用)。
+
+    ```bash
+    python run.py examples/eval_deepseek_r1.py
+    ```
+
+4.  **查看结果**:
+    评估完成后，结果将保存在 `outputs/deepseek_r1_reasoning/` 目录下。您可以在对应的 `summary` 文件中查看 `AIME2024-Aveage16` 的 `naive_average` 分数。
