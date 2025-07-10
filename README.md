@@ -507,7 +507,8 @@ models = [
 
 ```bash
 # 指定使用 0,1,2,3 四张卡
-CUDA_VISIBLE_DEVICES=0,1,2,3 python run.py examples/eval_deepseek_r1.py
+# 使用 `which python` 确保 torchrun 使用正确的 Python 解释器
+CUDA_VISIBLE_DEVICES=0,1,2,3 $(which python) run.py examples/eval_deepseek_r1.py
 ```
 
 ### 3. 查看结果
@@ -567,7 +568,7 @@ models = [
 配置完成后，使用与之前相同的命令来启动 vLLM 评估：
 
 ```bash
-python run.py examples/eval_deepseek_r1.py
+CUDA_VISIBLE_DEVICES=0,1,2,3 $(which python) run.py examples/eval_deepseek_r1.py
 ```
 
 评估结果将同样保存在 `outputs/deepseek_r1_reasoning/` 目录中。
